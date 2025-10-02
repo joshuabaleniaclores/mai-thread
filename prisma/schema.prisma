@@ -13,3 +13,97 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id        String   @id @default(cuid())    // Unique ID for each user
+  name      String?                          // User’s display name
+  email     String?  @unique                 // User’s email (unique if provided)
+  password  String?                          // Only for email/password signup (null if using Google)
+  image     String?                          // Profile picture (optional, often from Google)
+  role      Role     @default(CUSTOMER)      // Defines user type: ADMIN or CUSTOMER
+
+  accounts  Account[]                        // OAuth logins (Google, GitHub, etc.)
+  sessions  Session[]                        // Active sessions (managed by NextAuth)
+  orders    Order[]                          // Orders placed by this customer
+
+  createdAt DateTime @default(now())         // Timestamp when user is created
+  updatedAt DateTime @updatedAt              // Timestamp of last update
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String                                                                   // Links to User.id
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade) // Foreign key relation
+  type               String                                                                   
+  provider           String                                                                   
+  providerAccountId  String
+  refresh_token      String? 
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  @@unique([provider, providerAccountId]) // Each provider+account is unique
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique   // Used to identify logged-in sessions
+  userId       String             // FK to User.id
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime           // Session expiry date
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  stock       Int      @default(0)
+  image       String?
+
+  orders      OrderItem[]     // Links to orders that include this product
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Order {
+  id          String       @id @default(cuid())
+  customerId  String
+  customer    User         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  items       OrderItem[]
+  status      OrderStatus  @default(PENDING) // Pending, Processing, Shipped, Delivered, Cancelled
+  total       Float
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String   // FK to Order.id
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId String   // FK to Product.id
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity  Int      @default(1) // Number of items ordered
+  price     Float    // Snapshot of product price at time of order
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
