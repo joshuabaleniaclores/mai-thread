@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@/styles/globals.css";
 
 import { geistMono, geistSans } from "@/lib/fonts";
+import Providers from "@/providers/query-provider";
 
 export const metadata: Metadata = {
   title: "Mai Thread",
@@ -18,7 +19,7 @@ export default function AdminLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
